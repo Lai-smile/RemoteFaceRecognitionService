@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能实时人脸识别系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+            backdrop-filter: blur(8px);
+            padding: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2d3748;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stream-section {
+            flex: 2;
+            min-width: 600px;
+        }
+
+        .upload-title {
+            font-size: 1.4rem;
+            color: #2d3748;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-title i {
+            color: #667eea;
+            font-size: 1.6rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f5f6ff;
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .upload-area p {
+            color: #718096;
+            margin-bottom: 10px;
+        }
+
+        .upload-area .hint {
+            font-size: 0.9rem;
+            color: #a0aec0;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .face-count {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            color: #2d3748;
+        }
+
+        .stream-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #face-stream {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .status {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-error {
+            background: #e53e3e;
+        }
+
+        .alert-success {
+            background: #38a169;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 992px) {
+            .content {
+                flex-direction: column;
+            }
+            .stream-section {
+                min-width: 100%;
+            }
+        }
+    </style>
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>智能实时人脸识别系统</h1>
+            <h3>Intelligent face recognition system</h3>
+            <p>Upload face database → Real-time recognition → Multi-terminal access</p>
+        </header>
+
+        <div class="content">
+            <!-- 上传区域 -->
+            <div class="upload-section">
+                <div class="upload-title">
+                    <i class="fas fa-user-plus"></i>
+                    Face database management
+                </div>
+
+                <div class="upload-area" id="upload-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Click or drag files here to upload</p>
+                    <p class="hint">Supported formats: JPG, PNG, JPEG, BMP (a clear front-facing photo of a single person is preferred)</p>
+                    <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp">
+                </div>
+
+                <button class="upload-btn" id="upload-btn" disabled>Upload the selected image</button>
+
+                <div class="face-count" id="face-count">
+                    <i class="fas fa-users"></i> Current number of people in the face database:<span id="count">0</span>
+                </div>
+            </div>
+
+            <!-- 视频流区域 -->
+            <div class="stream-section">
+                <div class="stream-container">
+                    <div class="status">
+                        <i class="fas fa-video"></i> In real-time recognition...
+                    </div>
+                    <img id="face-stream" alt="实时人脸识别画面">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div class="alert alert-error" id="error-alert"></div>
+    <div class="alert alert-success" id="success-alert"></div>
+
+    <script>
+        // 全局变量
+        let selectedFile = null;
+
+        // DOM 元素
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const faceCount = document.getElementById('count');
+        const errorAlert = document.getElementById('error-alert');
+        const successAlert = document.getElementById('success-alert');
+        const faceStream = document.getElementById('face-stream');
+
+        // ==================== 上传逻辑 ====================
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 拖拽文件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '#f5f6ff';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#cbd5e0';
+            uploadArea.style.background = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#cbd5e0';
+            uploadArea.style.background = '';
+
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        // 文件选择回调
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFileSelect(fileInput.files[0]);
+            }
+        });
+
+        // 处理文件选择
+        function handleFileSelect(file) {
+            // 校验文件格式
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/bmp', 'image/jpg'];
+            if (!allowedTypes.includes(file.type)) {
+                showAlert('error', 'File format error! Only JPG, PNG, JPEG, and BMP formats are supported.');
+                return;
+            }
+
+            // 校验文件大小（最大5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert('error', 'The file is too large! Please upload an image smaller than 5MB.');
+                return;
+            }
+
+            selectedFile = file;
+            uploadBtn.disabled = false;
+            showAlert('success', `已选择文件：${file.name}`);
+        }
+
+        // 上传按钮点击事件
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showAlert('error', 'Please first select the image to upload.');
+                return;
+            }
+
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                // 发送上传请求
+                const response = await fetch('/upload-face', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('success', result.msg);
+                    faceCount.textContent = result.count;
+                    // 重置选择
+                    selectedFile = null;
+                    fileInput.value = '';
+                    uploadBtn.disabled = true;
+                } else {
+                    showAlert('error', result.detail || 'Upload failed');
+                }
+            } catch (error) {
+                showAlert('error', 'Network error! Please check if the service is running.');
+                console.error('Upload failed：', error);
+            }
+        });
+
+        // ==================== WebSocket 视频流 ====================
+        function connectWebSocket() {
+            // 创建WebSocket连接
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/face-stream`);
+            ws.binaryType = 'arraybuffer';
+
+            // 接收视频帧
+            ws.onmessage = (event) => {
+                const blob = new Blob([event.data], { type: 'image/jpeg' });
+                faceStream.src = URL.createObjectURL(blob);
+            };
+
+            // 连接关闭重连
+            ws.onclose = () => {
+                showAlert('error', 'The video stream connection has been disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            // 连接错误
+            ws.onerror = (error) => {
+                showAlert('error', 'Video stream connection error!');
+                console.error('WebSocket错误：', error);
+            };
+        }
+
+        // ==================== 工具函数 ====================
+        // 显示提示弹窗
+        function showAlert(type, message) {
+            const alertEl = type === 'error' ? errorAlert : successAlert;
+            alertEl.textContent = message;
+            alertEl.style.display = 'block';
+
+            // 3秒后隐藏
+            setTimeout(() => {
+                alertEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // 获取当前人脸库数量
+        async function getFaceCount() {
+            try {
+                // 这里简化处理，实际可加接口返回数量，先默认0
+                faceCount.textContent = '0';
+            } catch (error) {
+                console.error('Failed to obtain the number of face databases:', error);
+            }
+        }
+
+        // 初始化
+        window.onload = () => {
+            getFaceCount();
+            connectWebSocket();
+        };
+    </script>
+</body>
+</html>
